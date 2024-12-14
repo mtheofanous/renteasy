@@ -71,6 +71,19 @@ def logout():
         reset_profile_saved_state()
 
 # Helper function to load profiles
+# def load_profiles():
+#     """Load profiles from the JSON file."""
+#     if os.path.exists(PROFILE_FILE):
+#         with open(PROFILE_FILE, "r") as file:
+#             try:
+#                 profiles = json.load(file)
+#                 return profiles
+#             except json.JSONDecodeError:
+#                 st.warning("Profile file is corrupted or empty. Resetting profiles.")
+#                 return {}
+#     return {}
+
+
 def load_profiles():
     """Load profiles from the JSON file."""
     if os.path.exists(PROFILE_FILE):
@@ -80,8 +93,8 @@ def load_profiles():
                 return profiles
             except json.JSONDecodeError:
                 st.warning("Profile file is corrupted or empty. Resetting profiles.")
-                return {}
-    return {}
+                return []
+    return []
 
 # Helper function to save profiles
 def save_profile_to_file(profile):
@@ -112,66 +125,6 @@ def reset_profile_saved_state():
     st.session_state["profile_saved"] = False
     st.session_state["saved_profile"] = {}
 
-# Render a visually appealing profile preview
-# def render_profile_preview(profile):
-#     st.markdown("## 🎉 Profile Preview")
-#     st.divider()
-
-#     # Header Section
-#     st.markdown(f"""
-#     <div style="text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 20px;">
-#         {profile['name']}
-#     </div>
-#     <div style="text-align: center; font-size: 18px; color: grey; margin-bottom: 30px;">
-#         {profile['tagline']}
-#     </div>
-#     """, unsafe_allow_html=True)
-#     st.divider()
-
-#     # Personal Details
-#     st.markdown("### 🧍 Personal Details")
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         st.markdown(f"- **Email:** {profile['email']}")
-#         st.markdown(f"- **Phone:** {profile['phone']}")
-#         st.markdown(f"- **Nationality:** {profile['nationality']}")
-#     with col2:
-#         st.markdown(f"- **Marital Status:** {profile['marital_status']}")
-#         st.markdown(f"- **Pets:** {profile['pets']}")
-#         st.markdown(f"- **Occupation:** {profile['occupation']} ({profile['contract_type']})")
-
-#     st.divider()
-
-#     # Rental Preferences
-#     st.markdown("### 🏡 Rental Preferences")
-#     st.markdown(f"""
-#     - **City:** {profile['city']}
-#     - **Area:** {profile['area']}
-#     - **Budget Range:** ${profile['budget'][0]} - ${profile['budget'][1]}
-#     - **Property Type:** {profile['property_type']}
-#     - **Move-in Date:** {profile['move_in_date']}
-#     - **Lease Duration:** {profile['lease_duration']}
-#     """)
-#     st.divider()
-
-#     # About Me
-#     st.markdown("### 📝 About Me")
-#     st.markdown(f"""
-#     - **Bio:** {profile['bio']}
-#     - **Hobbies:** {profile['hobbies']}
-#     """)
-#     st.divider()
-
-#     # Income and Credit Score
-#     st.markdown("### 💳 Income and Credit Score")
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         st.markdown(f"- **Monthly Income:** ${profile['income']}")
-#     with col2:
-#         if profile['credit_score_verified']:
-#             st.markdown("✅ **Credit Score Verified**")
-#         else:
-#             st.markdown("⚠️ **Credit Score Not Verified**")
 
 #     st.divider()
 def render_profile_preview(profile):
@@ -488,9 +441,33 @@ def landlord_agent_page():
         verify_recommendations()
 
 # View Renter Profiles
+# def view_renter_profiles():
+#     st.subheader("🏘️ View Renter Profiles")
+#     profiles = load_profiles()
+
+#     if not profiles:
+#         st.warning("No renter profiles available.")
+#         return
+
+#     # Filter Options
+#     with st.expander("Filter Profiles"):
+#         city_filter = st.selectbox("City", ["All"] + list({p["city"] for p in profiles}))
+
+#         # Dynamically populate area filter based on selected city
+#         if city_filter == "All":
+#             area_options = {p["area"] for p in profiles}
+#         else:
+#             area_options = {p["area"] for p in profiles if p["city"] == city_filter}
+#         area_filter = st.selectbox("Area", ["All"] + list(area_options))
+
+#         budget_min, budget_max = st.slider("Budget Range ($)", 500, 5000, (500, 5000))
+#         credit_filter = st.radio("Credit Score Verified", ["All", "Yes", "No"])
+#         recommendation_filter = st.radio("Recommendation Verified", ["All", "Yes", "No"])
+
+
 def view_renter_profiles():
     st.subheader("🏘️ View Renter Profiles")
-    profiles = load_profiles()
+    profiles = load_profiles()  # Assuming this function loads the profiles as a list of dictionaries
 
     if not profiles:
         st.warning("No renter profiles available.")
@@ -498,14 +475,14 @@ def view_renter_profiles():
 
     # Filter Options
     with st.expander("Filter Profiles"):
-        city_filter = st.selectbox("City", ["All"] + list({p["city"] for p in profiles}))
+        city_filter = st.selectbox("City", ["All"] + sorted({p.get("city", "Unknown") for p in profiles}))
 
         # Dynamically populate area filter based on selected city
         if city_filter == "All":
-            area_options = {p["area"] for p in profiles}
+            area_options = {p.get("area", "Unknown") for p in profiles}
         else:
-            area_options = {p["area"] for p in profiles if p["city"] == city_filter}
-        area_filter = st.selectbox("Area", ["All"] + list(area_options))
+            area_options = {p.get("area", "Unknown") for p in profiles if p.get("city") == city_filter}
+        area_filter = st.selectbox("Area", ["All"] + sorted(area_options))
 
         budget_min, budget_max = st.slider("Budget Range ($)", 500, 5000, (500, 5000))
         credit_filter = st.radio("Credit Score Verified", ["All", "Yes", "No"])
@@ -514,38 +491,71 @@ def view_renter_profiles():
     # Filter Profiles
     filtered_profiles = []
     for profile in profiles:
-        if city_filter != "All" and profile["city"] != city_filter:
-            continue
-        if area_filter != "All" and profile["area"] != area_filter:
-            continue
-        if not (budget_min <= profile["budget"][0] and profile["budget"][1] <= budget_max):
-            continue
-        if credit_filter == "Yes" and not profile["credit_score_verified"]:
-            continue
-        if credit_filter == "No" and profile["credit_score_verified"]:
-            continue
-        if recommendation_filter == "Yes" and not profile["landlord_recommendation"]["recommendation_verified"]:
-            continue
-        if recommendation_filter == "No" and profile["landlord_recommendation"]["recommendation_verified"]:
-            continue
-        filtered_profiles.append(profile)
+        try:
+            # Handle budget as a range [min, max] or single value
+            budget = profile.get("budget", [0, 0])
+            if isinstance(budget, list) and len(budget) == 2:
+                in_budget_range = not (budget_max < budget[0] or budget_min > budget[1])
+            elif isinstance(budget, (int, float)):
+                in_budget_range = budget_min <= budget <= budget_max
+            else:
+                continue
+
+            # Apply all filters
+            if (city_filter == "All" or profile.get("city") == city_filter) and \
+               (area_filter == "All" or profile.get("area") == area_filter) and \
+               in_budget_range and \
+               (credit_filter == "All" or (credit_filter == "Yes" and profile.get("credit_score_verified")) or
+                (credit_filter == "No" and not profile.get("credit_score_verified"))) and \
+               (recommendation_filter == "All" or
+                (recommendation_filter == "Yes" and profile.get("landlord_recommendation", {}).get("recommendation_verified")) or
+                (recommendation_filter == "No" and not profile.get("landlord_recommendation", {}).get("recommendation_verified"))):
+                filtered_profiles.append(profile)
+        except KeyError as e:
+            st.error(f"Profile missing field: {e}")
 
     # Display Filtered Profiles
     if not filtered_profiles:
         st.warning("No profiles match the selected filters.")
-    else:
-        for i, profile in enumerate(filtered_profiles):
+        return
+
+    st.markdown(
+        """
+        <style>
+        .profile-box {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2 = st.columns(2)
+    for i, profile in enumerate(filtered_profiles):
+        with (col1 if i % 2 == 0 else col2):
             profile_key = f"profile_{i}"  # Unique key for each profile's state
 
             # Initialize session state for profile visibility
             if profile_key not in st.session_state:
                 st.session_state[profile_key] = False
 
-            st.markdown(f"### {profile['name']}")
-            st.markdown(f"- **City:** {profile['city']}")
-            st.markdown(f"- **Budget:** ${profile['budget'][0]} - ${profile['budget'][1]}")
-            st.markdown(f"- **Credit Score Verified:** {'✅' if profile['credit_score_verified'] else '❌'}")
-            st.markdown(f"- **Recommendation Verified:** {'✅' if profile['landlord_recommendation']['recommendation_verified'] else '❌'}")
+            st.markdown(
+                f"""
+                <div class="profile-box">
+                    <strong>Name:</strong> {profile.get('name', 'N/A')}<br>
+                    <strong>City:</strong> {profile.get('city', 'N/A')}<br>
+                    <strong>Area:</strong> {profile.get('area', 'N/A')}<br>
+                    <strong>Budget:</strong> ${profile.get('budget', [0, 0])[0]} - ${profile.get('budget', [0, 0])[1]}<br>
+                    <strong>Credit Score Verified:</strong> {"✅" if profile.get('credit_score_verified') else "❌"}<br>
+                    <strong>Recommendation Verified:</strong> {"✅" if profile.get('landlord_recommendation', {}).get('recommendation_verified') else "❌"}<br>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             # Toggle View Profile
             if st.button(f"View Profile: {profile['name']}", key=f"view_profile_{i}"):
@@ -553,8 +563,8 @@ def view_renter_profiles():
 
             # Display full profile if toggled on
             if st.session_state[profile_key]:
-    
                 render_profile_preview(profile)
+
 
 
 # Verify Recommendations
